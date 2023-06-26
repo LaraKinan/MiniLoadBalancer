@@ -9,7 +9,7 @@ previous_server = 3
 lock = threading.Lock()
 SERV_HOST = '10.0.0.1'
 servers = {'serv1': ('192.168.0.101', None), 'serv2': ('192.168.0.102', None), 'serv3': ('192.168.0.103', None)}
-serverTimes = {'serv1' : (None, 0), 'serv2' : (None, 0), 'serv3' : (None, 0)}
+serverTimes = {'serv1' : ("V", 0), 'serv2' : ("V", 0), 'serv3' : ("M", 0)}
 
 def LBPrint(string):
     print '%s: %s-----' % (time.strftime('%H:%M:%S', time.localtime(time.time())), string)
@@ -68,12 +68,36 @@ def parseRequest(req):
 
 
 class LoadBalancerRequestHandler(SocketServer.BaseRequestHandler):
+    
+    def expectedTime(self, servID, reqType, reqTime):
+        if(serverTimes['serv%d' % servID][0] == 'M' and reqType == "V"):
+            return 3*reqTime
+        if((serverTimes['serv%d' % servID][0] == 'M' and reqType == "P") or (serverTimes['serv%d' % servID][0] == 'V' and reqType == "M")):
+            return 2*reqTime
+        return reqTime
+    
+    def expectedTotalTime(self, servID, reqType, reqTime):
+        times = []
+        for i in range(1, len(servers) + 1):
+            if i == servID:
+                times.append(serverTimes['serv%d' % i][1] + self.expectedTime(i, reqType, reqTime))
+            else:
+                times.append(serverTimes['serv%d' % i][1])
+        return max(times)
+    
+    def decide(self, reqType, reqTime):
+        max_times = []
+        for i in range(1, len(servers) + 1):
+            max_times.append((self.expectedTotalTime(i, reqType, reqTime)), i)
+        minServID, minTime = min(max_times)
+        return minServID
 
     def handle(self):
         client_sock = self.request
         req = client_sock.recv(2)
         req_type, req_time = parseRequest(req)
-        servID = getNextServer() # TODO: Change to function that handles my algorithm : int decideServer(req_type, req_time, )
+        # servID = getNextServer() # TODO: Change to function that handles my algorithm : int decideServer(req_type, req_time, )
+        servID = self.decide(req_type, req_time)
         LBPrint('recieved request %s from %s, sending to %s' % (req, self.client_address[0], getServerAddr(servID)))
         serv_sock = getServerSocket(servID)
         serv_sock.sendall(req)
@@ -87,7 +111,6 @@ class ThreadedTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
 
 
 if __name__ == '__main__':
-    # TODO: Add serviTime for i = 1,2,3 and use this in the algorithm
     try:
         LBPrint('LB Started')
         LBPrint('Connecting to servers')
