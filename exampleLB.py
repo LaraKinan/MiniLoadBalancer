@@ -87,7 +87,9 @@ class LoadBalancerRequestHandler(SocketServer.BaseRequestHandler):
     
     def decide(self, reqType, reqTime):
         max_times = []
+        print("Entered decide")
         for i in range(1, len(servers) + 1):
+            print("for i = ", i)
             max_times.append((self.expectedTotalTime(i, reqType, reqTime)), i)
             print("The max for adding ", reqType,reqTime, " at ", i , " is ", max_times[i - 1])
         minServID, minTime = min(max_times)
@@ -97,6 +99,7 @@ class LoadBalancerRequestHandler(SocketServer.BaseRequestHandler):
         client_sock = self.request
         req = client_sock.recv(2)
         req_type, req_time = parseRequest(req)
+        print("Handling ", req_type, req_time)
         # servID = getNextServer() # TODO: Change to function that handles my algorithm : int decideServer(req_type, req_time, )
         servID = self.decide(req_type, req_time)
         LBPrint('recieved request %s from %s, sending to %s' % (req, self.client_address[0], getServerAddr(servID)))
