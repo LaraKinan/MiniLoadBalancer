@@ -89,6 +89,7 @@ class LoadBalancerRequestHandler(SocketServer.BaseRequestHandler):
         max_times = []
         for i in range(1, len(servers) + 1):
             max_times.append((self.expectedTotalTime(i, reqType, reqTime)), i)
+            print("The max for adding ", reqType,reqTime, " at ", i , " is ", max_times[i - 1])
         minServID, minTime = min(max_times)
         return minServID
 
