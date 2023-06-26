@@ -1,8 +1,3 @@
-# uncompyle6 version 3.9.0
-# Python bytecode version base 2.7 (62211)
-# Decompiled from: Python 3.9.8 (tags/v3.9.8:bb3fdcf, Nov  5 2021, 20:48:33) [MSC v.1929 64 bit (AMD64)]
-# Embedded file name: ./exampleLB.py
-# Compiled at: 2015-12-28 12:42:45
 import socket, SocketServer, Queue, sys, time, threading
 HTTP_PORT = 80
 previous_server = 3
@@ -18,7 +13,6 @@ def LBPrint(string):
 def createSocket(addr, port):
     for res in socket.getaddrinfo(addr, port, socket.AF_UNSPEC, socket.SOCK_STREAM):
         af, socktype, proto, canonname, sa = res
-        print("af ", af, " sockType ", socktype, " proto ", proto, " canonname ", canonname, " sa ", sa)
         try:
             new_sock = socket.socket(af, socktype, proto)
         except socket.error as msg:
@@ -71,10 +65,10 @@ class LoadBalancerRequestHandler(SocketServer.BaseRequestHandler):
     
     def expectedTime(self, servID, reqType, reqTime):
         if(serverTimes['serv%d' % servID][0] == 'M' and reqType == "V"):
-            return 3*reqTime
+            return 3*int(reqTime)
         if((serverTimes['serv%d' % servID][0] == 'M' and reqType == "P") or (serverTimes['serv%d' % servID][0] == 'V' and reqType == "M")):
-            return 2*reqTime
-        return reqTime
+            return 2*int(reqTime)
+        return int(reqTime)
     
     def expectedTotalTime(self, servID, reqType, reqTime):
         times = []
@@ -87,21 +81,21 @@ class LoadBalancerRequestHandler(SocketServer.BaseRequestHandler):
     
     def decide(self, reqType, reqTime):
         max_times = []
-        print("Entered decide")
         for i in range(1, len(servers) + 1):
-            print("for i = ", i)
-            max_times.append((self.expectedTotalTime(i, reqType, reqTime)), i)
-            print("The max for adding ", reqType,reqTime, " at ", i , " is ", max_times[i - 1])
-        minServID, minTime = min(max_times)
+            max_times.append((self.expectedTotalTime(i, reqType, reqTime), i))
+        if max_times[1][0] == max_times[2][0]:
+	    return 2 if serverTimes['serv%d' % 2][0] == reqType else 3
+	if max_times[0][0] == max_times[2][0]:
+	    return 1 if serverTimes['serv%d' % 1][0] == reqType else 3
+	minTime, minServID = min(max_times)
         return minServID
 
     def handle(self):
         client_sock = self.request
         req = client_sock.recv(2)
         req_type, req_time = parseRequest(req)
-        print("Handling ", req_type, req_time)
-        # servID = getNextServer() # TODO: Change to function that handles my algorithm : int decideServer(req_type, req_time, )
         servID = self.decide(req_type, req_time)
+	serverTimes['serv%d' % servID] =  (serverTimes['serv%d' % servID][0], serverTimes['serv%d' % servID][1] + self.expectedTime(servID, req_type, req_time))
         LBPrint('recieved request %s from %s, sending to %s' % (req, self.client_address[0], getServerAddr(servID)))
         serv_sock = getServerSocket(servID)
         serv_sock.sendall(req)
@@ -127,4 +121,3 @@ if __name__ == '__main__':
         server.serve_forever()
     except socket.error as msg:
         LBPrint(msg)
-# okay decompiling exampleLB.pyc
