@@ -110,12 +110,12 @@ if __name__ == '__main__':
             servers[name] = (
              addr, new_socket)
 
-        lb_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        lb_socket.bind((SERV_HOST, HTTP_PORT))
-        lb_socket.listen(20)
+        my_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        my_socket.bind((SERV_HOST, HTTP_PORT))
+        my_socket.listen(20)
 
         while True:
-            client_sock, client_address = lb_socket.accept()
+            client_sock, client_address = my_socket.accept()
             handler = threading.Thread(target=handle, args=(client_sock, client_address))
             handler.start()
     except socket.error as msg:
