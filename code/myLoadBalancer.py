@@ -109,6 +109,15 @@ def handle(client_socket, client_address):
     client_sock.sendall(data)
     client_sock.close()
 
+def checkAllDone():
+    time_rn = int(time.time())
+    for i in range(1, len(servers) + 1):
+        if time_rn - serverTimes['serv%d' % i][2] < serverTimes['serv%d' % i][1]:
+            return False
+    for i in range(1, len(servers) + 1):
+        serverTimes['serv%d' % i][2] = 0
+    return True
+
 if __name__ == '__main__':
     try:
         LBPrint('LB Started')
@@ -123,6 +132,7 @@ if __name__ == '__main__':
         my_socket.listen(20)
 
         while True:
+            checkAllDone()
             client_sock, client_address = my_socket.accept()
             handler = threading.Thread(target=handle, args=(client_sock, client_address))
             handler.start()
