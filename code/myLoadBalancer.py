@@ -4,7 +4,7 @@ previous_server = 3
 lock = threading.Lock()
 SERV_HOST = '10.0.0.1'
 servers = {'serv1': ('192.168.0.101', None), 'serv2': ('192.168.0.102', None), 'serv3': ('192.168.0.103', None)}
-serverTimes = {'serv1' : ("V", 0), 'serv2' : ("V", 0), 'serv3' : ("M", 0)}
+serverTimes = {'serv1' : ("V", 0, 0), 'serv2' : ("V", 0, 0), 'serv3' : ("M", 0, 0)}
 
 def LBPrint(string):
     print '%s: %s-----' % (time.strftime('%H:%M:%S', time.localtime(time.time())), string)
@@ -71,9 +71,13 @@ def expectedTime(servID, reqType, reqTime):
 def expectedTotalTime(servID, reqType, reqTime, reqRecvTime):
     times = []
     for i in range(1, len(servers) + 1):
-        start_time = reqRecvTime if serverTimes['serv%d' % i][1] == 0 else serverTimes['serv%d' % i][1]
+        start_time = reqRecvTime if serverTimes['serv%d' % i][2] == 0 else serverTimes['serv%d' % i][2]
         if i == servID:
-            times.append( start_time + expectedTime(i, reqType, reqTime))
+            time_rn = time.time()
+            if time_rn - start_time < serverTimes['serv%d' % i][1]:
+                times.append( serverTimes['serv%d' % i][1] + time_rn + expectedTime(i, reqType, reqTime))
+            else:
+                times.append( serverTimes['serv%d' % i][1] + expectedTime(i, reqType, reqTime))
         else:
             times.append(start_time)
     return max(times)
@@ -95,8 +99,8 @@ def handle(client_socket, client_address):
     req_type, req_time = parseRequest(req)
     reqGotAtTime = time.time()
     servID = decide(req_type, req_time, reqGotAtTime)
-    start_time_req = reqGotAtTime if  serverTimes['serv%d' % servID][1] == 0 else serverTimes['serv%d' % servID][1]
-    serverTimes['serv%d' % servID] =  (serverTimes['serv%d' % servID][0], start_time_req + expectedTime(servID, req_type, req_time))
+    start_time_req = reqGotAtTime if  serverTimes['serv%d' % servID][2] == 0 else serverTimes['serv%d' % servID][2]
+    serverTimes['serv%d' % servID] =  (serverTimes['serv%d' % servID][0], serverTimes['serv%d' % servID][1] + expectedTime(servID, req_type, req_time), start_time_req)
     LBPrint('recieved request %s from %s, sending to %s' % (req, client_address[0], getServerAddr(servID)))
     serv_sock = getServerSocket(servID)
     serv_sock.sendall(req)
