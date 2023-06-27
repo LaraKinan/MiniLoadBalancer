@@ -61,8 +61,13 @@ def parseRequest(req):
      req[0], req[1])
 
 
-class LoadBalancerRequestHandler(SocketServer.BaseRequestHandler):
+class LoadBalancerRequestHandler(threading.Thread):
     
+    def __init__(self, client_sock, client_address):
+        threading.Thread.__init__(self)
+        self.client_sock = client_sock
+        self.client_address = client_address
+
     def expectedTime(self, servID, reqType, reqTime):
         if(serverTimes['serv%d' % servID][0] == 'M' and reqType == "V"):
             return 3*int(reqTime)
@@ -91,7 +96,7 @@ class LoadBalancerRequestHandler(SocketServer.BaseRequestHandler):
         return minServID
 
     def handle(self):
-        client_sock = self.request
+        client_sock = self.client_sock
         req = client_sock.recv(2)
         req_type, req_time = parseRequest(req)
         servID = self.decide(req_type, req_time)
@@ -103,11 +108,6 @@ class LoadBalancerRequestHandler(SocketServer.BaseRequestHandler):
         client_sock.sendall(data)
         client_sock.close()
 
-
-class ThreadedTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
-    pass
-
-
 if __name__ == '__main__':
     try:
         LBPrint('LB Started')
@@ -116,8 +116,14 @@ if __name__ == '__main__':
             new_socket = createSocket(addr, HTTP_PORT)
             servers[name] = (
              addr, new_socket)
+        
+        lb_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        lb_socket.bind((SERV_HOST, HTTP_PORT))
+        lb_socket.listen(5)
 
-        server = ThreadedTCPServer((SERV_HOST, HTTP_PORT), LoadBalancerRequestHandler)
-        server.serve_forever()
+        while True:
+            client_sock, client_address = lb_socket.accept()
+            handler = LoadBalancerRequestHandler(client_sock, client_address)
+            handler.start()
     except socket.error as msg:
         LBPrint(msg)
