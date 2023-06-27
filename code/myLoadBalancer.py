@@ -106,6 +106,7 @@ def handle(client_socket, client_address):
     req_type, req_time = parseRequest(req)
     reqGotAtTime = int(time.time())
     LBPrint("At receiving message "+ req_type + str(req_time))
+    printServers()
     servID = decide(req_type, req_time, reqGotAtTime)
     start_time_req = reqGotAtTime if  serverTimes['serv%d' % servID][2] == 0 else serverTimes['serv%d' % servID][2]
     serverTimes['serv%d' % servID] =  (serverTimes['serv%d' % servID][0], serverTimes['serv%d' % servID][1] + expectedTime(servID, req_type, req_time), start_time_req)
