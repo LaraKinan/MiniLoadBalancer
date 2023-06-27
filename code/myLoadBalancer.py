@@ -84,12 +84,16 @@ def expectedTotalTime(servID, reqType, reqTime, reqRecvTime, time_rn):
 def decide(reqType, reqTime, reqRecvTime):
     time_rn = int(time.time())
     max_times = []
+    
     for i in range(1, len(servers) + 1):
         max_times.append((expectedTotalTime(i, reqType, reqTime, reqRecvTime, time_rn), i))
     if max_times[1][0] == max_times[2][0]:
         return 2 if serverTimes['serv%d' % 2][0] == 'V' and (reqType == 'V' or reqType == 'P') else 3
     if max_times[0][0] == max_times[2][0]:
         return 1 if serverTimes['serv%d' % 1][0] == 'V' and (reqType == 'V' or reqType == 'P') else 3
+    if max_times[0][0] == max_times[1][0]:
+        return 1 if expectedTime(1, reqType, reqTime) < expectedTime(2, reqType, reqTime) else 2
+    
     minTime, minServID = min(max_times)
     return minServID
 
@@ -109,7 +113,11 @@ def handle(client_socket, client_address):
     printServers()
     servID = decide(req_type, req_time, reqGotAtTime)
     start_time_req = reqGotAtTime if  serverTimes['serv%d' % servID][2] == 0 else serverTimes['serv%d' % servID][2]
+    
+    lock.acquire()
     serverTimes['serv%d' % servID] =  (serverTimes['serv%d' % servID][0], serverTimes['serv%d' % servID][1] + expectedTime(servID, req_type, req_time), start_time_req)
+    lock.release()
+
     LBPrint('recieved request %s from %s, sending to %s' % (req, client_address[0], getServerAddr(servID)))
     serv_sock = getServerSocket(servID)
     serv_sock.sendall(req)
