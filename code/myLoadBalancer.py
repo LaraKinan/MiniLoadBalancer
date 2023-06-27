@@ -93,16 +93,23 @@ def decide(reqType, reqTime, reqRecvTime):
     minTime, minServID = min(max_times)
     return minServID
 
+def printServCred(servID):
+    LBPrint("For server i = " + str(servID) +" " + str(serverTimes['serv%d' % servID][0]) + " " + str(serverTimes['serv%d' % servID][1]) + " " + str(serverTimes['serv%d' % servID][2]) + " ")
+
+def printServers():
+    for i in range(1, len(servers) + 1):
+        printServCred(i)
+
 def handle(client_socket, client_address):
     client_sock = client_socket
     req = client_sock.recv(2)
     req_type, req_time = parseRequest(req)
     reqGotAtTime = int(time.time())
+    LBPrint("At receiving message "+ req_type + str(req_time))
     servID = decide(req_type, req_time, reqGotAtTime)
     start_time_req = reqGotAtTime if  serverTimes['serv%d' % servID][2] == 0 else serverTimes['serv%d' % servID][2]
     serverTimes['serv%d' % servID] =  (serverTimes['serv%d' % servID][0], serverTimes['serv%d' % servID][1] + expectedTime(servID, req_type, req_time), start_time_req)
     LBPrint('recieved request %s from %s, sending to %s' % (req, client_address[0], getServerAddr(servID)))
-    LBPrint("For server i = " + str(servID) + str(serverTimes['serv%d' % servID][0]) + " " + str(serverTimes['serv%d' % servID][1]) + " " + str(serverTimes['serv%d' % servID][2]) + " ")
     serv_sock = getServerSocket(servID)
     serv_sock.sendall(req)
     data = serv_sock.recv(2)
