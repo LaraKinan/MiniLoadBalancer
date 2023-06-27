@@ -87,9 +87,9 @@ def decide(reqType, reqTime, reqRecvTime):
     for i in range(1, len(servers) + 1):
         max_times.append((expectedTotalTime(i, reqType, reqTime, reqRecvTime, time_rn), i))
     if max_times[1][0] == max_times[2][0]:
-        return 2 if serverTimes['serv%d' % 2][0] == reqType else 3
+        return 2 if serverTimes['serv%d' % 2][0] == 'V' and (reqType == 'V' or reqType == 'P') else 3
     if max_times[0][0] == max_times[2][0]:
-        return 1 if serverTimes['serv%d' % 1][0] == reqType else 3
+        return 1 if serverTimes['serv%d' % 1][0] == 'V' and (reqType == 'V' or reqType == 'P') else 3
     minTime, minServID = min(max_times)
     return minServID
 
