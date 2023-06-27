@@ -92,6 +92,7 @@ def decide(reqType, reqTime, reqRecvTime):
     if max_times[0][0] == max_times[2][0] and minTime == max_times[0][0]:
         return 1 if serverTimes['serv%d' % 1][0] == 'V' and (reqType == 'V' or reqType == 'P') else 3
     if max_times[0][0] == max_times[1][0] and minTime == max_times[0][0]:
+        LBPrint("Got here with " + str(max_times[1][0]) + " " + str(expectedTime(1, reqType, reqTime)) + " "+ str(expectedTime(2, reqType, reqTime)))
         return 1 if expectedTime(1, reqType, reqTime) < expectedTime(2, reqType, reqTime) else 2
     
     return minServID
