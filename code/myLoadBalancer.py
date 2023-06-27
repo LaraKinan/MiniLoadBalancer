@@ -1,4 +1,4 @@
-import socket, SocketServer, Queue, sys, time, threading
+import socket, sys, time, threading
 HTTP_PORT = 80
 previous_server = 3
 lock = threading.Lock()
@@ -68,19 +68,20 @@ def expectedTime(servID, reqType, reqTime):
         return 2*int(reqTime)
     return int(reqTime)
 
-def expectedTotalTime(servID, reqType, reqTime):
+def expectedTotalTime(servID, reqType, reqTime, reqRecvTime):
     times = []
+    start_time = reqRecvTime if serverTimes['serv%d' % i][1] == 0 else serverTimes['serv%d' % i][1]
     for i in range(1, len(servers) + 1):
         if i == servID:
-            times.append(serverTimes['serv%d' % i][1] + expectedTime(i, reqType, reqTime))
+            times.append( start_time + expectedTime(i, reqType, reqTime))
         else:
-            times.append(serverTimes['serv%d' % i][1])
+            times.append(start_time)
     return max(times)
 
-def decide(reqType, reqTime):
+def decide(reqType, reqTime, reqRecvTime):
     max_times = []
     for i in range(1, len(servers) + 1):
-        max_times.append((expectedTotalTime(i, reqType, reqTime), i))
+        max_times.append((expectedTotalTime(i, reqType, reqTime, reqRecvTime), i))
     if max_times[1][0] == max_times[2][0]:
         return 2 if serverTimes['serv%d' % 2][0] == reqType else 3
     if max_times[0][0] == max_times[2][0]:
@@ -92,8 +93,10 @@ def handle(client_socket, client_address):
     client_sock = client_socket
     req = client_sock.recv(2)
     req_type, req_time = parseRequest(req)
-    servID = decide(req_type, req_time)
-    serverTimes['serv%d' % servID] =  (serverTimes['serv%d' % servID][0], serverTimes['serv%d' % servID][1] + expectedTime(servID, req_type, req_time))
+    reqGotAtTime = time.time()
+    servID = decide(req_type, req_time, reqGotAtTime)
+    start_time_req = reqGotAtTime if  serverTimes['serv%d' % servID][1] == 0 else serverTimes['serv%d' % servID][1]
+    serverTimes['serv%d' % servID] =  (serverTimes['serv%d' % servID][0], start_time_req + expectedTime(servID, req_type, req_time))
     LBPrint('recieved request %s from %s, sending to %s' % (req, client_address[0], getServerAddr(servID)))
     serv_sock = getServerSocket(servID)
     serv_sock.sendall(req)
