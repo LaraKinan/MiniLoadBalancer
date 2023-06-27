@@ -68,24 +68,24 @@ def expectedTime(servID, reqType, reqTime):
         return 2*int(reqTime)
     return int(reqTime)
 
-def expectedTotalTime(servID, reqType, reqTime, reqRecvTime):
+def expectedTotalTime(servID, reqType, reqTime, reqRecvTime, time_rn):
     times = []
     for i in range(1, len(servers) + 1):
-        start_time = reqRecvTime if serverTimes['serv%d' % i][2] == 0 else serverTimes['serv%d' % i][2]
+        start_time = int(reqRecvTime) if serverTimes['serv%d' % i][2] == 0 else serverTimes['serv%d' % i][2]
         if i == servID:
-            time_rn = time.time()
             if time_rn - start_time < serverTimes['serv%d' % i][1]:
                 times.append( serverTimes['serv%d' % i][1] + ( (start_time + serverTimes['serv%d' % i][1]) - time_rn) + expectedTime(i, reqType, reqTime))
             else:
                 times.append( serverTimes['serv%d' % i][1] + expectedTime(i, reqType, reqTime))
         else:
-            times.append(start_time)
+            times.append(serverTimes['serv%d' % i][1])
     return max(times)
 
 def decide(reqType, reqTime, reqRecvTime):
+    time_rn = int(time.time())
     max_times = []
     for i in range(1, len(servers) + 1):
-        max_times.append((expectedTotalTime(i, reqType, reqTime, reqRecvTime), i))
+        max_times.append((expectedTotalTime(i, reqType, reqTime, reqRecvTime, time_rn), i))
     if max_times[1][0] == max_times[2][0]:
         return 2 if serverTimes['serv%d' % 2][0] == reqType else 3
     if max_times[0][0] == max_times[2][0]:
@@ -97,7 +97,7 @@ def handle(client_socket, client_address):
     client_sock = client_socket
     req = client_sock.recv(2)
     req_type, req_time = parseRequest(req)
-    reqGotAtTime = time.time()
+    reqGotAtTime = int(time.time())
     servID = decide(req_type, req_time, reqGotAtTime)
     start_time_req = reqGotAtTime if  serverTimes['serv%d' % servID][2] == 0 else serverTimes['serv%d' % servID][2]
     serverTimes['serv%d' % servID] =  (serverTimes['serv%d' % servID][0], serverTimes['serv%d' % servID][1] + expectedTime(servID, req_type, req_time), start_time_req)
