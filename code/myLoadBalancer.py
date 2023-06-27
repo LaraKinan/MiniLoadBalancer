@@ -114,7 +114,10 @@ def printServers():
     for i in range(1, len(servers) + 1):
         printServCred(i)
 
-def handle(client_socket, client_address):
+def handle():
+    if len(reqQueue) == 0:
+        return
+    (client_socket, client_address) = reqQueue.pop(0)
     client_sock = client_socket
     req = client_sock.recv(2)
     req_type, req_time = parseRequest(req)
@@ -148,6 +151,7 @@ if __name__ == '__main__':
     try:
         LBPrint('LB Started')
         LBPrint('Connecting to servers')
+        reqQueue = []
         for name, (addr, sock) in servers.iteritems():
             new_socket = createSocket(addr, HTTP_PORT)
             servers[name] = (
@@ -160,7 +164,8 @@ if __name__ == '__main__':
         while True:
             checkAllDone()
             client_sock, client_address = my_socket.accept()
-            handler = threading.Thread(target=handle, args=(client_sock, client_address))
+            reqQueue.append((client_sock, client_address))
+            handler = threading.Thread(target=handle)
             handler.start()
     except socket.error as msg:
         LBPrint(msg)
