@@ -92,8 +92,8 @@ def decide(reqType, reqTime, reqRecvTime):
     if max_times[0][0] == max_times[2][0] and minTime == max_times[0][0]:
         return 1 if serverTimes['serv%d' % 1][0] == 'V' and (reqType == 'V' or reqType == 'P') else 3
     if max_times[0][0] == max_times[1][0] and minTime == max_times[0][0]:
-        e1 = expectedTime(1, reqType, reqTime)
-        e2 = expectedTime(2, reqType, reqTime)
+        e1 = expectedTotalTime(1, reqType, reqTime, reqRecvTime, time_rn)
+        e2 = expectedTotalTime(2, reqType, reqTime, reqRecvTime, time_rn)
         LBPrint("Got here with " + str(max_times[1][0]) + " " + str(e1) + " "+ str(e2))
         return 1 if e1 < e2 else 2
     
