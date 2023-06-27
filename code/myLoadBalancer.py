@@ -74,9 +74,9 @@ def expectedTotalTime(servID, reqType, reqTime, reqRecvTime, time_rn):
         start_time = int(reqRecvTime) if serverTimes['serv%d' % i][2] == 0 else serverTimes['serv%d' % i][2]
         if i == servID:
             if time_rn - start_time < serverTimes['serv%d' % i][1]:
-                times.append( start_time + ( (start_time + 2*serverTimes['serv%d' % i][1]) - time_rn) + expectedTime(i, reqType, reqTime))
+                times.append( time_rn + ( (start_time + serverTimes['serv%d' % i][1]) - time_rn) + expectedTime(i, reqType, reqTime))
             else:
-                times.append( start_time + serverTimes['serv%d' % i][1] + expectedTime(i, reqType, reqTime))
+                times.append( time_rn + expectedTime(i, reqType, reqTime))
         else:
             times.append(start_time + serverTimes['serv%d' % i][1])
     return max(times)
