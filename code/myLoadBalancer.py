@@ -60,53 +60,46 @@ def parseRequest(req):
     return (
      req[0], req[1])
 
+ 
+def expectedTime(servID, reqType, reqTime):
+    if(serverTimes['serv%d' % servID][0] == 'M' and reqType == "V"):
+        return 3*int(reqTime)
+    if((serverTimes['serv%d' % servID][0] == 'M' and reqType == "P") or (serverTimes['serv%d' % servID][0] == 'V' and reqType == "M")):
+        return 2*int(reqTime)
+    return int(reqTime)
 
-class LoadBalancerRequestHandler(threading.Thread):
-    
-    def __init__(self, client_sock, client_address):
-        threading.Thread.__init__(self)
-        self.client_sock = client_sock
-        self.client_address = client_address
+def expectedTotalTime(servID, reqType, reqTime):
+    times = []
+    for i in range(1, len(servers) + 1):
+        if i == servID:
+            times.append(serverTimes['serv%d' % i][1] + expectedTime(i, reqType, reqTime))
+        else:
+            times.append(serverTimes['serv%d' % i][1])
+    return max(times)
 
-    def expectedTime(self, servID, reqType, reqTime):
-        if(serverTimes['serv%d' % servID][0] == 'M' and reqType == "V"):
-            return 3*int(reqTime)
-        if((serverTimes['serv%d' % servID][0] == 'M' and reqType == "P") or (serverTimes['serv%d' % servID][0] == 'V' and reqType == "M")):
-            return 2*int(reqTime)
-        return int(reqTime)
-    
-    def expectedTotalTime(self, servID, reqType, reqTime):
-        times = []
-        for i in range(1, len(servers) + 1):
-            if i == servID:
-                times.append(serverTimes['serv%d' % i][1] + self.expectedTime(i, reqType, reqTime))
-            else:
-                times.append(serverTimes['serv%d' % i][1])
-        return max(times)
-    
-    def decide(self, reqType, reqTime):
-        max_times = []
-        for i in range(1, len(servers) + 1):
-            max_times.append((self.expectedTotalTime(i, reqType, reqTime), i))
-        if max_times[1][0] == max_times[2][0]:
-            return 2 if serverTimes['serv%d' % 2][0] == reqType else 3
-        if max_times[0][0] == max_times[2][0]:
-            return 1 if serverTimes['serv%d' % 1][0] == reqType else 3
-        minTime, minServID = min(max_times)
-        return minServID
+def decide(reqType, reqTime):
+    max_times = []
+    for i in range(1, len(servers) + 1):
+        max_times.append((expectedTotalTime(i, reqType, reqTime), i))
+    if max_times[1][0] == max_times[2][0]:
+        return 2 if serverTimes['serv%d' % 2][0] == reqType else 3
+    if max_times[0][0] == max_times[2][0]:
+        return 1 if serverTimes['serv%d' % 1][0] == reqType else 3
+    minTime, minServID = min(max_times)
+    return minServID
 
-    def handle(self):
-        client_sock = self.client_sock
-        req = client_sock.recv(2)
-        req_type, req_time = parseRequest(req)
-        servID = self.decide(req_type, req_time)
-        serverTimes['serv%d' % servID] =  (serverTimes['serv%d' % servID][0], serverTimes['serv%d' % servID][1] + self.expectedTime(servID, req_type, req_time))
-        LBPrint('recieved request %s from %s, sending to %s' % (req, self.client_address[0], getServerAddr(servID)))
-        serv_sock = getServerSocket(servID)
-        serv_sock.sendall(req)
-        data = serv_sock.recv(2)
-        client_sock.sendall(data)
-        client_sock.close()
+def handle(client_socket, client_address):
+    client_sock = client_socket
+    req = client_sock.recv(2)
+    req_type, req_time = parseRequest(req)
+    servID = decide(req_type, req_time)
+    serverTimes['serv%d' % servID] =  (serverTimes['serv%d' % servID][0], serverTimes['serv%d' % servID][1] + expectedTime(servID, req_type, req_time))
+    LBPrint('recieved request %s from %s, sending to %s' % (req, client_address[0], getServerAddr(servID)))
+    serv_sock = getServerSocket(servID)
+    serv_sock.sendall(req)
+    data = serv_sock.recv(2)
+    client_sock.sendall(data)
+    client_sock.close()
 
 if __name__ == '__main__':
     try:
@@ -116,14 +109,14 @@ if __name__ == '__main__':
             new_socket = createSocket(addr, HTTP_PORT)
             servers[name] = (
              addr, new_socket)
-        
+
         lb_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         lb_socket.bind((SERV_HOST, HTTP_PORT))
-        lb_socket.listen(5)
+        lb_socket.listen(20)
 
         while True:
             client_sock, client_address = lb_socket.accept()
-            handler = LoadBalancerRequestHandler(client_sock, client_address)
+            handler = threading.Thread(target=handle, args=(client_sock, client_address))
             handler.start()
     except socket.error as msg:
         LBPrint(msg)
