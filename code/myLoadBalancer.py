@@ -162,7 +162,7 @@ if __name__ == '__main__':
         my_socket.bind((SERV_HOST, HTTP_PORT))
         my_socket.listen(20)
         
-        accepter = threading.Thread(target=acceptConn, args=reqQueue)
+        accepter = threading.Thread(target=acceptConn(reqQueue))
         accepter.start()
         
         while True:
