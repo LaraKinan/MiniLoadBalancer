@@ -173,7 +173,7 @@ if __name__ == '__main__':
         
         while True:
             checkAllDone()
-            acceptConn()
+            acceptConn(reqQueue)
             handler = threading.Thread(target=handle)
             handler.start()
     except socket.error as msg:
