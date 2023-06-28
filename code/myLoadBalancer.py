@@ -147,7 +147,7 @@ def acceptConn(reqQueue):
         lock.acquire()
         reqQueue.append((client_sock, client_address))
         lock.release()
-        
+
 if __name__ == '__main__':
     try:
         LBPrint('LB Started')
@@ -162,7 +162,7 @@ if __name__ == '__main__':
         my_socket.bind((SERV_HOST, HTTP_PORT))
         my_socket.listen(20)
         
-        accepter = threading.Thread(target=acceptConn, args=(reqQueue))
+        accepter = threading.Thread(target=acceptConn, args=reqQueue)
         accepter.start()
         
         while True:
