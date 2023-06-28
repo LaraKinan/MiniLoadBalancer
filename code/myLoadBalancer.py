@@ -142,11 +142,10 @@ def checkAllDone():
     return True
 
 def acceptConn(reqQueue):
-    while(True):
-        client_sock, client_address = my_socket.accept()
-        lock.acquire()
-        reqQueue.append((client_sock, client_address))
-        lock.release()
+    client_sock, client_address = my_socket.accept()
+    lock.acquire()
+    reqQueue.append((client_sock, client_address))
+    lock.release()
 
 if __name__ == '__main__':
     try:
@@ -162,11 +161,10 @@ if __name__ == '__main__':
         my_socket.bind((SERV_HOST, HTTP_PORT))
         my_socket.listen(20)
         
-        accepter = threading.Thread(target=acceptConn(reqQueue))
-        accepter.start()
-        
         while True:
             checkAllDone()
+            accepter = threading.Thread(target=acceptConn(reqQueue))
+            accepter.start()
             handler = threading.Thread(target=handle)
             handler.start()
     except socket.error as msg:
