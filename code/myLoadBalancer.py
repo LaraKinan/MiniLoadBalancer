@@ -102,28 +102,22 @@ def decide(reqType, reqTime, reqRecvTime):
         if time_rn - start_time2 < serverTimes['serv%d' % 2][1]:
             diff2 =  (start_time2 + serverTimes['serv%d' % 2][1]) - time_rn
         e2 = time_rn + expectedTime(2, reqType, reqTime) + diff2
-        LBPrint("Got here with " + str(max_times[1][0]) + " " + str(e1) + " "+ str(e2))
         return 1 if e1 < e2 else 2
     
     return minServID
 
-def printServCred(servID):
-    LBPrint("For server i = " + str(servID) +" " + str(serverTimes['serv%d' % servID][0]) + " " + str(serverTimes['serv%d' % servID][1]) + " " + str(serverTimes['serv%d' % servID][2]) + " ")
-
-def printServers():
-    for i in range(1, len(servers) + 1):
-        printServCred(i)
 
 def handle():
     if len(reqQueue) == 0:
         return
+    lock.acquire()
     (client_socket, client_address) = reqQueue.pop(0)
-    client_sock = client_socket
-    req = client_sock.recv(2)
+    lock.release()
+
+    req = client_socket.recv(2)
     req_type, req_time = parseRequest(req)
     reqGotAtTime = int(time.time())
     LBPrint("At receiving message "+ req_type + str(req_time))
-    printServers()
     servID = decide(req_type, req_time, reqGotAtTime)
     start_time_req = reqGotAtTime if  serverTimes['serv%d' % servID][2] == 0 else serverTimes['serv%d' % servID][2]
     
@@ -135,8 +129,8 @@ def handle():
     serv_sock = getServerSocket(servID)
     serv_sock.sendall(req)
     data = serv_sock.recv(2)
-    client_sock.sendall(data)
-    client_sock.close()
+    client_socket.sendall(data)
+    client_socket.close()
 
 def checkAllDone():
     time_rn = int(time.time())
@@ -147,6 +141,13 @@ def checkAllDone():
         serverTimes['serv%d' % i] = (serverTimes['serv%d' % i][0], 0, 0)
     return True
 
+def acceptConn(reqQueue):
+    while(True):
+        client_sock, client_address = my_socket.accept()
+        lock.acquire()
+        reqQueue.append((client_sock, client_address))
+        lock.release()
+        
 if __name__ == '__main__':
     try:
         LBPrint('LB Started')
@@ -160,11 +161,12 @@ if __name__ == '__main__':
         my_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         my_socket.bind((SERV_HOST, HTTP_PORT))
         my_socket.listen(20)
-
+        
+        accepter = threading.Thread(target=acceptConn, args=(reqQueue))
+        accepter.start()
+        
         while True:
             checkAllDone()
-            client_sock, client_address = my_socket.accept()
-            reqQueue.append((client_sock, client_address))
             handler = threading.Thread(target=handle)
             handler.start()
     except socket.error as msg:
